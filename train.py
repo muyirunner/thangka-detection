@@ -1,3 +1,4 @@
+from pathlib import Path
 from ultralytics import YOLO
 
 if __name__ == '__main__':
@@ -7,7 +8,7 @@ if __name__ == '__main__':
     # ============================================================
 
     # 从上次中断的权重恢复训练 (last.pt 保存了训练状态)
-    model = YOLO(r'runs\train\yolov8s_gpu\weights\last.pt')
+    model = YOLO(str(Path('runs/train/yolov8s_gpu/weights/last.pt')))
 
     # 恢复训练 - resume=True 会自动从上次中断处继续
     results = model.train(

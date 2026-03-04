@@ -1,19 +1,21 @@
+from pathlib import Path
 from ultralytics import YOLO
-import os
 import glob
 import random
+import platform
+import subprocess
 
 if __name__ == '__main__':
     # 1. 加载模型
     # 指向训练好的最佳权重文件 (yolov8s_gpu - 67类唐卡检测模型)
-    model_path = r'runs\train\yolov8s_gpu\weights\best.pt'
-    
-    if not os.path.exists(model_path):
+    model_path = Path('runs/train/yolov8s_gpu/weights/best.pt')
+
+    if not model_path.exists():
         print(f"错误：找不到模型文件 {model_path}")
         print("请检查路径，或者确认训练是否成功完成。")
         exit()
 
-    model = YOLO(model_path)
+    model = YOLO(str(model_path))
 
     # 2. 选择测试图片
     # 从验证集中随机选取图片进行测试
@@ -48,8 +50,14 @@ if __name__ == '__main__':
     print(f"\n检测完成！结果已保存在: {save_dir}")
     print("即刻为您打开结果文件夹...")
     
-    # 尝试自动打开结果文件夹 (仅限 Windows)
+    # 尝试自动打开结果文件夹 (跨平台)
     try:
-        os.startfile(save_dir)
+        system = platform.system()
+        if system == 'Windows':
+            subprocess.Popen(['explorer', str(save_dir)])
+        elif system == 'Darwin':
+            subprocess.Popen(['open', str(save_dir)])
+        else:
+            subprocess.Popen(['xdg-open', str(save_dir)])
     except Exception as e:
         print(f"无法自动打开文件夹，请手动查看: {e}")

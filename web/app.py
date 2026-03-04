@@ -8,12 +8,25 @@ import base64
 import io
 import time
 import json
+import logging
 import threading
 from pathlib import Path
+from functools import wraps
 
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, abort
+from werkzeug.utils import secure_filename
 from PIL import Image
 import numpy as np
+
+# ============================================================
+# 日志配置
+# ============================================================
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+)
+logger = logging.getLogger(__name__)
 
 # 将项目根目录加入 sys.path, 以便导入 ultralytics
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -27,26 +40,76 @@ from ultralytics import YOLO
 inference_lock = threading.Lock()
 
 # ============================================================
+# 简易速率限制 (基于 IP, 内存存储)
+# ============================================================
+_rate_limit_store = {}  # {ip: [timestamp, ...]}
+RATE_LIMIT_MAX_REQUESTS = 30   # 每个 IP 在时间窗口内最大请求数
+RATE_LIMIT_WINDOW_SECONDS = 60  # 时间窗口 (秒)
+
+def rate_limit(f):
+    """简易速率限制装饰器"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        client_ip = request.remote_addr or 'unknown'
+        now = time.time()
+        # 清理过期记录
+        if client_ip in _rate_limit_store:
+            _rate_limit_store[client_ip] = [
+                t for t in _rate_limit_store[client_ip]
+                if now - t < RATE_LIMIT_WINDOW_SECONDS
+            ]
+        else:
+            _rate_limit_store[client_ip] = []
+        # 检查是否超限
+        if len(_rate_limit_store[client_ip]) >= RATE_LIMIT_MAX_REQUESTS:
+            logger.warning(f"速率限制触发: IP={client_ip}")
+            return jsonify({'error': '请求过于频繁，请稍后再试'}), 429
+        _rate_limit_store[client_ip].append(now)
+        return f(*args, **kwargs)
+    return decorated_function
+
+# ============================================================
 # Flask 应用初始化
 # ============================================================
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 最大上传 16MB
 
 # ============================================================
+# 安全响应头
+# ============================================================
+@app.after_request
+def set_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    return response
+
+# ============================================================
+# 推理超时 (秒)
+# ============================================================
+INFERENCE_TIMEOUT = 30
+
+# ============================================================
 # 模型加载 (全局单例, 只加载一次)
 # ============================================================
 MODEL_PATH = PROJECT_ROOT / 'runs' / 'train' / 'yolov8s_gpu' / 'weights' / 'best.pt'
-print(f"正在加载模型: {MODEL_PATH}")
-model = YOLO(str(MODEL_PATH))
+model = None
 
-# 模型预热 (Warmup): 空跑一次, 加速网页端用户的首次点击
-print("正在进行模型预热 (Warmup)...")
-try:
-    dummy_img = Image.new('RGB', (640, 640), color='black')
-    model.predict(source=dummy_img, conf=0.5, verbose=False)
-except Exception as e:
-    print(f"预热失败 (不影响正常运行): {e}")
-print("✅ 模型加载与预热完成!")
+if not MODEL_PATH.exists():
+    logger.error(f"模型文件不存在: {MODEL_PATH}")
+    logger.error("请确认模型权重文件已放置到正确位置，或重新训练模型。")
+else:
+    logger.info(f"正在加载模型: {MODEL_PATH}")
+    try:
+        model = YOLO(str(MODEL_PATH))
+        # 模型预热 (Warmup): 空跑一次, 加速网页端用户的首次点击
+        logger.info("正在进行模型预热 (Warmup)...")
+        dummy_img = Image.new('RGB', (640, 640), color='black')
+        model.predict(source=dummy_img, conf=0.5, verbose=False)
+        logger.info("模型加载与预热完成!")
+    except Exception as e:
+        logger.error(f"模型加载失败: {e}")
+        model = None
 
 # ============================================================
 # 类别中英文映射 + 分组
@@ -132,6 +195,7 @@ def index():
 
 
 @app.route('/api/detect', methods=['POST'])
+@rate_limit
 def detect():
     """
     接收图片并执行 YOLO 检测
@@ -139,6 +203,9 @@ def detect():
     1. JSON body 包含 base64 图片: {"image": "data:image/jpeg;base64,..."}
     2. FormData 文件上传: file 字段
     """
+    if model is None:
+        return jsonify({'error': '模型未加载，请检查服务器日志'}), 503
+
     try:
         img = None
 
@@ -174,12 +241,17 @@ def detect():
             new_w = int(orig_w * scale)
             new_h = int(orig_h * scale)
             img = img.resize((new_w, new_h), Image.LANCZOS)
-            print(f"  大图缩放: {orig_w}x{orig_h} → {new_w}x{new_h}")
+            logger.info(f"大图缩放: {orig_w}x{orig_h} → {new_w}x{new_h}")
 
-        # 执行 YOLO 检测 (计时并加锁防冲突)
+        # 执行 YOLO 检测 (计时并加锁防冲突, 带超时保护)
         t_start = time.time()
-        with inference_lock:
-            results = model.predict(source=img, conf=0.10, verbose=False) # 门槛降为0.1，依靠前端实时过滤
+        acquired = inference_lock.acquire(timeout=INFERENCE_TIMEOUT)
+        if not acquired:
+            return jsonify({'error': '服务器繁忙，请稍后再试'}), 503
+        try:
+            results = model.predict(source=img, conf=0.10, verbose=False)  # 门槛降为0.1，依靠前端实时过滤
+        finally:
+            inference_lock.release()
         inference_time = round(time.time() - t_start, 3)  # 秒
         result = results[0]
 
@@ -235,8 +307,7 @@ def detect():
         })
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.exception(f"检测请求处理失败: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -258,7 +329,15 @@ def get_examples():
 @app.route('/api/examples/<filename>')
 def serve_example(filename):
     """提供示例图片静态文件"""
-    return send_from_directory(str(EXAMPLES_DIR), filename)
+    # 防止路径穿越攻击: 确保文件名安全
+    safe_name = secure_filename(filename)
+    if not safe_name or safe_name != filename:
+        abort(400, description='非法文件名')
+    # 额外校验: 仅允许图片扩展名
+    allowed_ext = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+    if Path(safe_name).suffix.lower() not in allowed_ext:
+        abort(400, description='不支持的文件类型')
+    return send_from_directory(str(EXAMPLES_DIR), safe_name)
 
 
 @app.route('/api/class_info')
@@ -274,9 +353,9 @@ def class_info():
 # 启动
 # ============================================================
 if __name__ == '__main__':
-    print("\n" + "=" * 50)
-    print("  唐卡元素识别系统 - Web 可视化")
-    print("  本机访问: http://localhost:5000")
-    print("  局域网访问: http://<你的IP>:5000")
-    print("=" * 50 + "\n")
+    logger.info("=" * 50)
+    logger.info("  唐卡元素识别系统 - Web 可视化")
+    logger.info("  本机访问: http://localhost:5000")
+    logger.info("  局域网访问: http://<你的IP>:5000")
+    logger.info("=" * 50)
     app.run(host='0.0.0.0', port=5000, debug=False)

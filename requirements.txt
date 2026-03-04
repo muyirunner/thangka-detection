@@ -1,0 +1,26 @@
+# ============================================================
+# 唐卡元素识别系统 - Python 依赖清单
+# 安装命令: pip install -r requirements.txt
+# ============================================================
+
+# 深度学习框架 (如有 NVIDIA GPU, 请按 https://pytorch.org 安装对应 CUDA 版本)
+torch>=2.0.0
+torchvision>=0.15.0
+
+# YOLOv8 核心库
+ultralytics>=8.0.0
+
+# Web 后端
+flask>=2.3.0
+
+# 图像处理
+Pillow>=9.0.0
+numpy>=1.23.0
+
+# 其他依赖 (ultralytics 会自动安装, 此处显式列出以便确认)
+opencv-python>=4.7.0
+matplotlib>=3.7.0
+pandas>=2.0.0
+pyyaml>=6.0
+tqdm>=4.65.0
+scipy>=1.10.0

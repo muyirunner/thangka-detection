@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>唐卡元素识别系统</title>
+    <meta name="description" content="基于 YOLOv8 深度学习的唐卡元素智能识别系统，支持摄像头扫描、图片上传和示例检测">
+    <!-- 字体预连接 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- ===== 顶部导航 ===== -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo">
+                <span class="logo-icon">◈</span>
+                <div class="logo-text">
+                    <h1>唐卡元素识别系统</h1>
+                    <p class="logo-sub">Thangka Element Detection · YOLOv8</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== 主区域 ===== -->
+    <main class="main-container">
+
+        <!-- 介绍区 -->
+        <section class="intro-section">
+            <div class="intro-ornament">❖</div>
+            <h2 class="section-title">智能识别 · 解读唐卡艺术密码</h2>
+            <p class="intro-desc">
+                运用深度学习技术，自动识别唐卡中的佛像、法器、神兽、纹样等 <strong>79 类</strong> 元素，
+                助力藏族文化遗产的数字化保护与研究。
+            </p>
+        </section>
+
+        <!-- 功能选择区 -->
+        <section class="mode-section">
+            <div class="mode-cards">
+                <div class="mode-card active" data-mode="upload" id="mode-upload">
+                    <div class="mode-icon">📁</div>
+                    <h3>上传图片</h3>
+                    <p>选择本地唐卡图片</p>
+                </div>
+                <div class="mode-card" data-mode="camera" id="mode-camera">
+                    <div class="mode-icon">📷</div>
+                    <h3>摄像头扫描</h3>
+                    <p>实时拍照检测</p>
+                </div>
+                <div class="mode-card" data-mode="examples" id="mode-examples">
+                    <div class="mode-icon">🖼️</div>
+                    <h3>示例图片</h3>
+                    <p>体验精选唐卡样本</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 操作区容器 -->
+        <section class="workspace-section">
+            <div class="workspace-panel" id="panel-upload">
+                <div class="upload-zone" id="upload-zone">
+                    <div class="upload-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+                        </svg>
+                    </div>
+                    <p class="upload-text">点击或拖拽唐卡图片到此处</p>
+                    <p class="upload-hint">支持 JPG、PNG 格式，最大 16MB</p>
+                    <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" hidden>
+                </div>
+            </div>
+
+            <div class="workspace-panel hidden" id="panel-camera">
+                <div class="camera-container">
+                    <video id="camera-video" autoplay playsinline></video>
+                    <div class="camera-overlay">
+                        <div class="scan-frame"></div>
+                    </div>
+                    <div class="camera-controls">
+                        <button class="btn btn-capture" id="btn-capture">
+                            <span class="capture-ring"></span>
+                        </button>
+                    </div>
+                </div>
+                <canvas id="camera-canvas" hidden></canvas>
+            </div>
+
+            <div class="workspace-panel hidden" id="panel-examples">
+                <div class="examples-grid" id="examples-grid"></div>
+            </div>
+        </section>
+
+        <!-- 预览 + 检测按钮 -->
+        <section class="preview-section hidden" id="preview-section">
+            <div class="preview-container">
+                <img id="preview-image" alt="预览图片">
+                <button class="btn btn-detect" id="btn-detect">
+                    <span class="btn-icon">⚡</span> 开始检测
+                </button>
+                <button class="btn btn-clear" id="btn-clear">重新选择</button>
+            </div>
+        </section>
+
+        <!-- 加载动画 -->
+        <section class="loading-section hidden" id="loading-section">
+            <div class="loading-spinner">
+                <div class="spinner-ring"></div>
+                <div class="spinner-ring"></div>
+                <div class="spinner-ring"></div>
+            </div>
+            <p class="loading-text">正在识别唐卡元素...</p>
+        </section>
+
+        <!-- 检测结果区 -->
+        <section class="result-section hidden" id="result-section">
+            <h2 class="section-title">◇ 检测结果 ◇</h2>
+
+            <!-- 视图切换 -->
+            <div class="view-toggle">
+                <button class="view-btn active" data-view="interactive" id="btn-view-interactive">
+                    <span>✨</span> 交互模式
+                </button>
+                <button class="view-btn" data-view="annotated" id="btn-view-annotated">
+                    <span>📋</span> 标注模式
+                </button>
+            </div>
+
+            <!-- 结果统计卡片 -->
+            <div class="stats-bar" id="stats-bar"></div>
+
+            <!-- 推理耗时 + 置信度滑块 -->
+            <div class="result-toolbar">
+                <div class="inference-time" id="inference-time"></div>
+                <div class="confidence-slider-wrap">
+                    <label for="conf-slider">置信度阈值</label>
+                    <input type="range" id="conf-slider" min="10" max="95" value="25" step="5">
+                    <span class="conf-value" id="conf-value">25%</span>
+                </div>
+            </div>
+
+            <!-- 结果主体 -->
+            <div class="result-body">
+                <!-- 交互模式: 原图 + Canvas 覆盖层 -->
+                <div class="result-image-wrap" id="interactive-view">
+                    <div class="canvas-wrapper" id="canvas-wrapper">
+                        <img id="original-image" alt="原图" crossorigin="anonymous">
+                        <canvas id="overlay-canvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- 标注模式: YOLO 标注图 -->
+                <div class="result-image-wrap hidden" id="annotated-view">
+                    <img id="result-image" alt="检测结果">
+                </div>
+
+                <!-- 检测元素列表 -->
+                <div class="result-details">
+                    <h3 class="details-title">识别到的元素</h3>
+                    <div class="detection-list" id="detection-list"></div>
+                </div>
+            </div>
+
+            <!-- 操作按钮组 -->
+            <div class="result-actions">
+                <button class="btn btn-again" id="btn-again">
+                    <span class="btn-icon">🔄</span> 再次检测
+                </button>
+                <button class="btn btn-download" id="btn-download">
+                    <span class="btn-icon">💾</span> 保存标注图
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ===== 详情弹窗 Modal ===== -->
+    <div class="modal-overlay hidden" id="detail-modal">
+        <div class="modal-card">
+            <button class="modal-close" id="modal-close">&times;</button>
+            <div class="modal-image-wrap">
+                <img id="modal-crop-image" alt="元素局部">
+            </div>
+            <div class="modal-info">
+                <h2 class="modal-name-zh" id="modal-name-zh"></h2>
+                <p class="modal-name-en" id="modal-name-en"></p>
+                <div class="modal-tags">
+                    <span class="modal-group-tag" id="modal-group"></span>
+                    <span class="modal-conf-tag" id="modal-conf"></span>
+                </div>
+                <div class="modal-desc" id="modal-desc"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 底部 ===== -->
+    <footer class="footer">
+        <div class="footer-ornament">࿇</div>
+        <p>唐卡元素智能识别系统 · 基于 YOLOv8 深度学习</p>
+        <p class="footer-sub">毕业设计项目</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,83 @@
+path: "D:\\毕设\\Ultralytics YOLOv8\\ultralytics-main\\dataset"
+train: train/images
+val: val/images
+names:
+  0: Buddha
+  1: mandala
+  2: nine signs and eight diagrams
+  3: lotus tower
+  4: treasure
+  5: cloud
+  6: flower and leaf
+  7: ivory
+  8: water
+  9: tree
+  10: mirror
+  11: animals
+  12: wrathful deity
+  13: umbrella
+  14: vajra wheel
+  15: rock
+  16: fire
+  17: stick
+  18: scepter
+  19: bull
+  20: pagoda
+  21: moon
+  22: mountain
+  23: bottle
+  24: conch
+  25: bowl
+  26: horse
+  27: ribbon
+  28: loong
+  29: bird
+  30: building
+  31: people
+  32: Pipa
+  33: trident
+  34: deer
+  35: sun
+  36: wheel of life
+  37: fruit
+  38: Kapala skull cup
+  39: body organ
+  40: vajra bell
+  41: crane
+  42: victory banner
+  43: lion
+  44: tiger
+  45: sword
+  46: elephant
+  47: canopy
+  48: prayer beads
+  49: coral
+  50: rope
+  51: vajra
+  52: arrow
+  53: bow
+  54: axe
+  55: symbol of ease
+  56: horsetail whisk
+  57: dog
+  58: monkey
+  59: rat
+  60: peafowl
+  61: Shri Chitipati
+  62: spear
+  63: lucky knot
+  64: pig
+  65: fish
+  66: vulture
+  67: shield
+  68: chook
+  69: grain
+  70: censer
+  71: celestial map
+  72: sheep
+  73: boat
+  74: dart
+  75: flag
+  76: vajra hammer
+  77: drum
+  78: vajra knife

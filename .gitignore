@@ -1,0 +1,166 @@
+# ==============================================================
+# 唐卡元素识别系统 - Git 忽略规则
+# 定制化: 保留项目所需的图片、权重和训练产出
+# ==============================================================
+
+# ---------- Python 通用 ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# ---------- 打包 / 分发 ----------
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+setup.py
+ultralytics.egg-info
+
+# ---------- 安装日志 ----------
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ---------- 测试 / 覆盖率 ----------
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+mlruns/
+
+# ---------- 翻译 ----------
+*.mo
+*.pot
+
+# ---------- Django ----------
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# ---------- Flask ----------
+instance/
+.webassets-cache
+
+# ---------- Jupyter ----------
+.ipynb_checkpoints
+
+# ---------- IPython ----------
+profile_default/
+ipython_config.py
+
+# ---------- 性能分析 ----------
+*.pclprof
+
+# ---------- 环境 / IDE ----------
+.python-version
+uv.lock
+__pypackages__/
+.env
+.venv
+.idea
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.spyderproject
+.spyproject
+.vscode/
+.devcontainer/
+.ropeproject
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.DS_Store
+
+# ---------- 文档构建 ----------
+/site
+docs/_build/
+
+# ---------- W&B / MLflow ----------
+wandb/
+
+# ---------- 大型数据集 (不上传 GitHub) ----------
+/datasets
+dataset/train/
+dataset/val/
+
+# ---------- 模型权重 (大文件, 不上传 GitHub) ----------
+# 注: best.pt / last.pt 太大, 建议通过 Release 或网盘分享
+*.pt
+*.ts
+*.pb
+*.onnx
+*.engine
+*.mlmodel
+*.mlpackage
+*.torchscript
+*.tflite
+*.h5
+*.mnn
+*_saved_model/
+*_web_model/
+*_openvino_model/
+*_paddle_model/
+*_ncnn_model/
+*_imx_model/
+pnnx*
+*.rknn
+weights/
+
+# ---------- 训练运行目录 ----------
+# 保留训练可视化结果 (曲线图、混淆矩阵)
+# 但排除大型中间文件
+runs/detect/
+runs/train/*/weights/
+runs/train/*/train_batch*.jpg
+runs/train/*/val_batch*.jpg
+
+# ---------- Ultralytics 自动下载资源 ----------
+/ultralytics/assets/
+calibration_*.npy
+
+# ---------- 视频文件 ----------
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+
+# ---------- 保留的文件 (取消忽略) ----------
+# 我们需要保留: requirements.txt, 示例图片, 训练结果图
+!requirements.txt
+!web/examples/*.jpg
+!web/examples/*.png
+!runs/train/*/results.csv
+!runs/train/*/args.yaml
+!runs/train/*/*.png
+!runs/train/*/labels.jpg
+!runs/train/*/results.png
+!dataset/data.yaml
+!dataset/classes.txt

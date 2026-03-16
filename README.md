@@ -54,6 +54,14 @@ thangka-detection/
   - 模型权重通过 Release 或网盘方式分发
   - 将演示端与训练端进一步解耦
 
+## 演示截图
+
+### 唐卡元素识别系统 Demo
+
+| 主界面 | 高亮交互 | 元素详情展示 |
+| :---: | :---: | :---: |
+| ![识别系统主界面](docs/screenshots/detection-demo-home.png) | ![识别高亮交互](docs/screenshots/detection-demo-highlight.png) | ![元素详情展示](docs/screenshots/detection-demo-detail.png) |
+
 ## 🛠 技术栈
 
 - **Python**
